@@ -8,6 +8,7 @@ import Observation
 ///   motion.csv  — every headphone-motion sample, t relative to session start
 ///   audio.caf   — microphone audio (if the mic is running)
 ///   events.csv  — captured segments with their label / prediction
+///   words.csv   — speech-recognizer words with timestamps and confidence (auto-labelling)
 ///   meta.json   — condition, prompt, clock offsets
 @MainActor @Observable
 final class SessionRecorder {
@@ -42,6 +43,10 @@ final class SessionRecorder {
     @ObservationIgnored private var startUptime: TimeInterval = 0
     @ObservationIgnored private var motionHandle: FileHandle?
     @ObservationIgnored private var eventsHandle: FileHandle?
+    @ObservationIgnored private var wordsHandle: FileHandle?
+    private(set) var wordCount = 0
+    /// Folder name of the session being recorded; used to split train/test by session.
+    var sessionID: String? { directory?.lastPathComponent }
     @ObservationIgnored private var audioWriter: AudioFileWriter?
     @ObservationIgnored private var sinkID: UUID?
     @ObservationIgnored private weak var sink: AudioSink?
@@ -57,6 +62,7 @@ final class SessionRecorder {
             try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
             motionHandle = try Self.makeFile(dir.appending(path: "motion.csv"), header: MotionSample.csvHeader)
             eventsHandle = try Self.makeFile(dir.appending(path: "events.csv"), header: "start,end,kind,label,confidence")
+            wordsHandle = try Self.makeFile(dir.appending(path: "words.csv"), header: "start,end,word,confidence,status")
         } catch {
             self.error = error.localizedDescription
             return
@@ -67,6 +73,7 @@ final class SessionRecorder {
         startedAt = Date()
         motionCount = 0
         eventCount = 0
+        wordCount = 0
 
         if audio.isRunning {
             let writer = AudioFileWriter(url: dir.appending(path: "audio.caf"))
@@ -87,8 +94,10 @@ final class SessionRecorder {
         audioWriter = nil
         try? motionHandle?.close()
         try? eventsHandle?.close()
+        try? wordsHandle?.close()
         motionHandle = nil
         eventsHandle = nil
+        wordsHandle = nil
 
         let meta: [String: Any] = [
             "condition": condition.rawValue,
@@ -98,6 +107,7 @@ final class SessionRecorder {
             "durationSeconds": ProcessInfo.processInfo.systemUptime - startUptime,
             "motionSamples": motionCount,
             "events": eventCount,
+            "words": wordCount,
             "audioDevice": audioDeviceName ?? NSNull(),
             "audioSampleRate": audioInfo?.sampleRate ?? NSNull(),
             "audioStartOffsetSeconds": audioInfo?.firstHostSeconds.map { $0 - startUptime } ?? NSNull(),
@@ -127,6 +137,34 @@ final class SessionRecorder {
         ].joined(separator: ",")
         eventsHandle?.write(Data((row + "\n").utf8))
         eventCount += 1
+    }
+
+    func logWord(_ word: TimedWord, status: String) {
+        guard isRecording else { return }
+        let row = [
+            String(format: "%.4f", word.start - startUptime),
+            String(format: "%.4f", word.end - startUptime),
+            word.text.replacingOccurrences(of: ",", with: " "),
+            String(format: "%.3f", word.confidence),
+            status,
+        ].joined(separator: ",")
+        wordsHandle?.write(Data((row + "\n").utf8))
+        wordCount += 1
+    }
+
+    /// Deletes recorded sessions older than `days`. Returns how many were removed.
+    @discardableResult
+    static func purge(olderThan days: Int, keeping current: URL? = nil) -> Int {
+        let fm = FileManager.default
+        guard let items = try? fm.contentsOfDirectory(
+            at: root, includingPropertiesForKeys: [.creationDateKey], options: [.skipsHiddenFiles]) else { return 0 }
+        let cutoff = Date().addingTimeInterval(-Double(days) * 86_400)
+        var removed = 0
+        for url in items where url.standardizedFileURL != current?.standardizedFileURL {
+            let created = (try? url.resourceValues(forKeys: [.creationDateKey]).creationDate) ?? .distantFuture
+            if created < cutoff, (try? fm.removeItem(at: url)) != nil { removed += 1 }
+        }
+        return removed
     }
 
     private static func makeFile(_ url: URL, header: String) throws -> FileHandle {

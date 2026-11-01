@@ -5,6 +5,14 @@ struct Template: Codable, Identifiable, Hashable, Sendable {
     var label: String
     var samples: [MotionSample]
     var createdAt = Date()
+    /// Recording session the take came from. Evaluation never matches a take against
+    /// neighbours from its own session when sessions are available.
+    var sessionID: String?
+    /// "Normal speech", "Whisper", "Silent mouthing"…
+    var condition: String?
+    /// "manual" (Space-held) or "stt" (auto-labelled by speech recognition).
+    var source: String?
+    var sttConfidence: Double?
 
     var duration: TimeInterval {
         guard let first = samples.first, let last = samples.last else { return 0 }
@@ -85,8 +93,17 @@ struct Evaluation: Sendable {
     var pValue: Double
     var permutations: Int
     var templateCount: Int
+    /// True if neighbours from the same recording session were excluded.
+    var sessionSplit = false
 
-    static func run(templates: [Template], featureSet: FeatureSet, permutations: Int = 500) -> Evaluation? {
+    /// Group key used to keep a take from matching its own session. Takes without a session
+    /// get a unique group, i.e. plain leave-one-out.
+    static func groups(_ templates: [Template]) -> [String] {
+        templates.map { $0.sessionID ?? $0.id.uuidString }
+    }
+
+    static func run(templates: [Template], featureSet: FeatureSet, permutations: Int = 500,
+                    splitBySession: Bool = false) -> Evaluation? {
         let labels = Array(Set(templates.map(\.label))).sorted()
         let counts = Dictionary(grouping: templates, by: \.label).mapValues(\.count)
         guard labels.count >= 2, counts.values.allSatisfy({ $0 >= 2 }), !featureSet.isEmpty else { return nil }
@@ -108,14 +125,16 @@ struct Evaluation: Sendable {
 
         let index = Dictionary(uniqueKeysWithValues: labels.enumerated().map { ($1, $0) })
         let truth = templates.map { index[$0.label]! }
+        let group = splitBySession ? groups(templates) : templates.map(\.id.uuidString)
+        guard Set(group).count >= 2 else { return nil }
 
         func leaveOneOut(_ assignment: [Int]) -> [Int] {
             (0..<n).map { i in
                 var best = [Double](repeating: .infinity, count: labels.count)
-                for j in 0..<n where j != i {
+                for j in 0..<n where j != i && group[j] != group[i] {
                     best[assignment[j]] = min(best[assignment[j]], distance[i][j])
                 }
-                return best.indices.min { best[$0] < best[$1] }!
+                return best.indices.min { best[$0] < best[$1] } ?? 0
             }
         }
 
@@ -147,6 +166,67 @@ struct Evaluation: Sendable {
             permutationP95: nullAccuracies.isEmpty ? 0 : nullAccuracies[Int(Double(nullAccuracies.count - 1) * 0.95)],
             pValue: Double(atLeast + 1) / Double(permutations + 1),
             permutations: permutations,
-            templateCount: n)
+            templateCount: n,
+            sessionSplit: splitBySession)
+    }
+}
+
+/// Train on one set of takes (e.g. STT-labelled spoken sessions), test on another
+/// (e.g. silent mouthing). Answers "does what was learned from speech survive silence?"
+struct TransferEvaluation: Sendable {
+    var labels: [String]
+    var confusion: [[Int]]
+    var accuracy: Double
+    var chance: Double
+    var trainCount: Int
+    var testCount: Int
+    /// Accuracy with shuffled training labels, 95th percentile, and p-value.
+    var permutationP95: Double
+    var pValue: Double
+
+    static func run(train: [Template], test: [Template], featureSet: FeatureSet,
+                    permutations: Int = 200) -> TransferEvaluation? {
+        let labels = Array(Set(train.map(\.label))).sorted()
+        let test = test.filter { labels.contains($0.label) }
+        guard labels.count >= 2, !test.isEmpty, !featureSet.isEmpty else { return nil }
+
+        let trainRaw = train.map { MotionFeatures.frames(MotionFeatures.trim($0.samples), set: featureSet) }
+        let scales = MotionFeatures.channelScales(trainRaw)
+        let trainSeqs = trainRaw.map { MotionFeatures.scaled($0, by: scales) }
+        let testSeqs = test.map {
+            MotionFeatures.scaled(MotionFeatures.frames(MotionFeatures.trim($0.samples), set: featureSet), by: scales)
+        }
+        let distance = testSeqs.map { q in trainSeqs.map { DTW.distance(q, $0) } }
+
+        let index = Dictionary(uniqueKeysWithValues: labels.enumerated().map { ($1, $0) })
+        let trainTruth = train.map { index[$0.label]! }
+        let testTruth = test.map { index[$0.label]! }
+
+        func predict(_ assignment: [Int]) -> [Int] {
+            distance.map { row in
+                var best = [Double](repeating: .infinity, count: labels.count)
+                for (j, d) in row.enumerated() { best[assignment[j]] = min(best[assignment[j]], d) }
+                return best.indices.min { best[$0] < best[$1] } ?? 0
+            }
+        }
+        func accuracy(_ p: [Int]) -> Double {
+            Double(zip(p, testTruth).filter { $0 == $1 }.count) / Double(testTruth.count)
+        }
+
+        let predicted = predict(trainTruth)
+        var confusion = [[Int]](repeating: [Int](repeating: 0, count: labels.count), count: labels.count)
+        for (p, a) in zip(predicted, testTruth) { confusion[a][p] += 1 }
+        let observed = accuracy(predicted)
+
+        var generator = SystemRandomNumberGenerator()
+        var null = (0..<permutations).map { _ in accuracy(predict(trainTruth.shuffled(using: &generator))) }
+        null.sort()
+        let counts = Dictionary(grouping: testTruth, by: { $0 }).mapValues(\.count)
+        return TransferEvaluation(
+            labels: labels, confusion: confusion, accuracy: observed,
+            chance: Double(counts.values.max() ?? 0) / Double(testTruth.count),
+            trainCount: train.count, testCount: test.count,
+            permutationP95: null.isEmpty ? 0 : null[Int(Double(null.count - 1) * 0.95)],
+            pValue: Double(null.filter { $0 >= observed }.count + 1) / Double(permutations + 1))
     }
 }

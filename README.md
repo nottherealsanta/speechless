@@ -26,9 +26,14 @@ Requires macOS 14+, AirPods Pro or another headphone that supports head tracking
 
 | Screen | What it does |
 |---|---|
-| **Sensors** | Live plots of user acceleration, rotation rate and attitude, the measured sample rate, a mic input picker and level meter, and a recorder for experiment sessions. |
-| **Train** | Pick a word, hold **Space**, mouth it, release. Each take is stored as a template. **Evaluate** runs leave-one-out classification and a 500× label-permutation test, then shows accuracy against chance, a p-value and a confusion matrix. The feature checkboxes (acceleration / rotation / attitude) let you test which channels carry the signal. |
-| **Decode** | The motion-to-text screen. Hold Space, or use auto-detect after calibrating the noise floor. Each segment is DTW-matched against your templates and added to the transcript. A live mic transcript runs alongside it for comparison. |
+| **Train** | Shows live AirPods sensor data. Press **Record** (or hold Space), say a phrase and stop. The app records the AirPods motion during that time, and Moonshine Tiny on your Mac turns your speech into text in the text box. Edit the text, then click **Add to Training Data** (⌘↩). In *Silent mouthing* mode, nothing is transcribed and you type the text yourself. **Train Model** runs `training/`, then exports and installs the motion model. |
+| **Inference** | Shows live sensor data. Record while mouthing a phrase, and the LoRA-adapted Moonshine motion model decodes the motion into text. The microphone isn't used. |
+
+Clips are saved in `~/Documents/Subvox/Clips/<id>/` as `motion.csv`, `audio.wav` and `meta.json`. Models are stored in `~/Library/Application Support/Subvox/Model/`. First-time setup:
+
+```sh
+cd training && uv sync && uv run python -m subvox_train.export_audio --install
+```
 
 ## How decoding works
 
@@ -49,6 +54,33 @@ Use **Record Session** in the toolbar or on the Sensors screen. Recordings go to
 Suggested runs: the same 5-word script under **Normal speech**, **Whisper** and **Silent mouthing**, 10 reps each. Then, in Train, compare the Evaluate results across feature sets.
 
 The training set lives at `~/Library/Application Support/Subvox/dataset.json`.
+
+## Auto-labelling with speech recognition
+
+The **Auto-label** screen listens with on-device STT while you speak normally or whisper. Each finalized word includes timestamps, which are mapped onto the motion clock and used to cut that window from the AirPods stream. The app skips words with low confidence, words outside the vocabulary, windows with missing motion and big head turns. Kept words go to a review queue, where you can accept, correct or reject them. With **Record Session** on, the app also writes every word to `words.csv` in the session folder.
+
+Takes record their session and condition. Evaluate can hold out whole sessions, and **Evaluate Transfer** trains on speech-labelled takes and tests on silent-mouthing takes. A red toolbar badge shows while listening. You can pause, delete old sessions automatically after N days, or delete all auto-labelled takes.
+
+## Moonshine Tiny + LoRA (`training/`)
+
+The template recognizer is now the baseline. The main model reuses [Moonshine Tiny](https://huggingface.co/UsefulSensors/moonshine-tiny) as a pretrained speech decoder:
+
+```
+motion (16 ch @ 25 Hz) → MotionFrontend (new convs, resampled to Moonshine's 41.7 Hz, 288-d)
+  → Moonshine encoder layers (frozen + LoRA) → Moonshine decoder (frozen + LoRA) → text
+```
+
+Training changes only the frontend and LoRA adapters on q/k/v/o and the MLPs: about 0.87M of 28M parameters. If a session includes `audio.caf`, an extra loss compares the motion encoder's output with Moonshine's original audio encoder output for the same window.
+
+```sh
+cd training
+uv sync
+uv run python -m subvox_train.train --synthetic --epochs 15   # smoke test
+uv run python -m subvox_train.train                           # your Sessions + dataset.json
+uv run python -m subvox_train.train --eval-only checkpoints/motion-moonshine.pt
+```
+
+Phrases are built from consecutive words in `words.csv`. Train and test splits use whole sessions. Silent-mouthing sessions are always kept for testing, so the reported WER shows whether the model works without speaking. The output also shows a most-frequent-phrase baseline.
 
 ## Known limits
 

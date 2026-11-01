@@ -1,0 +1,13 @@
+[project]
+name = "subvox-train"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.13"
+dependencies = [
+    "coremltools>=9.0",
+    "numpy>=2.5.4",
+    "peft>=0.21.2",
+    "soundfile>=0.14.0",
+    "torch>=2.15.0",
+    "transformers>=5.22.1",
+]

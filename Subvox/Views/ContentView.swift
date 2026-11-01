@@ -14,11 +14,21 @@ struct ContentView: View {
             case .sensors: SensorsView()
             case .train: TrainView()
             case .decode: DecodeView()
+            case .autoLabel: AutoLabelView()
             }
         }
         .toolbar {
             ToolbarItem(placement: .status) {
                 MotionStatusBadge(status: model.motion.status, rate: model.motion.sampleRate)
+            }
+            ToolbarItem(placement: .status) {
+                if model.autoLabelEnabled {
+                    Label(model.autoLabelPaused ? "STT paused" : "Listening",
+                          systemImage: model.autoLabelPaused ? "pause.circle" : "waveform.circle.fill")
+                        .foregroundStyle(model.autoLabelPaused ? Color.secondary : Color.red)
+                        .labelStyle(.titleAndIcon)
+                        .help("Speech recognition is turning your speech into motion training labels.")
+                }
             }
             ToolbarItem {
                 RecordToolbarButton()

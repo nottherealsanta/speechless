@@ -66,3 +66,39 @@ final class DecodingTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(trimmed.count, 20)
     }
 }
+
+final class AutoLabelerTests: XCTestCase {
+    private let motion = (0..<100).map { MotionSample(t: 10 + Double($0) / 25) }
+
+    func testCutsWindowAroundWord() throws {
+        let word = TimedWord(text: "Yes.", start: 11, end: 11.4, confidence: 0.9)
+        let result = try AutoLabeler.label(word, motion: motion, vocabulary: ["yes"], settings: .init()).get()
+        XCTAssertEqual(result.label, "yes")
+        XCTAssertEqual(result.samples.first!.t, 10.85, accuracy: 0.05)
+        XCTAssertEqual(result.samples.last!.t, 11.55, accuracy: 0.05)
+    }
+
+    func testSkipsUncertainUnknownAndMissingMotion() {
+        let settings = AutoLabelSettings()
+        func reason(_ w: TimedWord) -> SkipReason? {
+            if case .failure(let e) = AutoLabeler.label(w, motion: motion, vocabulary: ["yes"], settings: settings) { return e.reason }
+            return nil
+        }
+        XCTAssertEqual(reason(.init(text: "yes", start: 11, end: 11.4, confidence: 0.2)), .lowConfidence)
+        XCTAssertEqual(reason(.init(text: "maybe", start: 11, end: 11.4, confidence: 0.9)), .notInVocabulary)
+        XCTAssertEqual(reason(.init(text: "yes", start: 30, end: 30.4, confidence: 0.9)), .missingMotion)
+    }
+
+    func testSessionSplitExcludesSameSessionNeighbours() throws {
+        var templates: [Template] = []
+        for s in 0..<4 {
+            for _ in 0..<3 {
+                templates.append(Template(label: "yes", samples: (0..<30).map { MotionSample(t: Double($0) / 25, rotation: (sin(Double($0) / 3) * 0.2, 0, 0)) }, sessionID: "s\(s)"))
+                templates.append(Template(label: "no", samples: (0..<30).map { MotionSample(t: Double($0) / 25, rotation: (0, sin(Double($0) / 2) * 0.2, 0)) }, sessionID: "s\(s)"))
+            }
+        }
+        let result = try XCTUnwrap(Evaluation.run(templates: templates, featureSet: .rotation, permutations: 20, splitBySession: true))
+        XCTAssertTrue(result.sessionSplit)
+        XCTAssertGreaterThan(result.accuracy, 0.9)
+    }
+}
