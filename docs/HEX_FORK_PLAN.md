@@ -78,7 +78,7 @@ Cancelled, failed, near-silent, or no AirPods ──► nothing saved
                                            match · check · slice · save
                                                  │
                                                  ▼
-                          ~/Library/Application Support/Hex/Training/
+                          ~/Library/Application Support/hex-speechless/Training/
                                                  │
                                                  ▼
                        speechless/training  (load_hex() → Moonshine + LoRA)
@@ -139,7 +139,7 @@ Short dictations (≤ 5.8 s) are saved whole.
 Compatible with the Speechless trainer. One folder per example:
 
 ```
-~/Library/Application Support/Hex/Training/
+~/Library/Application Support/hex-speechless/Training/
   2026-11-01/
     20261101T143205.123-7f3a-0/
       motion.csv     t,ax,ay,az,rx,ry,rz,pitch,roll,yaw,gx,gy,gz,qw,qx,qy,qz   (t = seconds from piece start)
@@ -245,8 +245,8 @@ Failures are counted by reason (visible via `hex training status`). Nothing is s
 ## 11. First steps
 
 ```sh
-gh repo fork anomalyco/hex --clone --remote ~/src/hex-subvox
-cd ~/src/hex-subvox && git switch -c subvox/training-capture dev
+gh repo fork anomalyco/hex --clone          # into speechless/hex, gitignored by the parent repo
+cd hex && git switch -c speechless/training-capture dev
 cargo build && ./target/debug/hex      # M0
 ```
 
@@ -256,9 +256,10 @@ Then start M1 with `src/motion_bridge.swift`, modelled on `src/calendar.swift` a
 
 ## 12. Progress
 
-**Fork:** https://github.com/nottherealsanta/hex, cloned to `~/src/hex-subvox`, branch
-`subvox/training-capture` off `dev` at `5c118db` (three commits past the studied `a888312`), pushed
-to the fork. Actions are on for the fork; `check-linux.yml` runs from the branch by dispatch.
+**Fork:** https://github.com/nottherealsanta/hex, cloned to `hex/` in this checkout, branch
+`speechless/training-capture` off `dev` at `5c118db` (three commits past the studied `a888312`),
+pushed to the fork. It builds as `Hex Speechless.app`
+(`HEX_SPEECHLESS_BUILD=1 ./scripts/build-app.sh`). Actions are off for the fork: no CI.
 
 | # | State | Notes |
 |---|---|---|
@@ -280,7 +281,8 @@ to the fork. Actions are on for the fork; `check-linux.yml` runs from the branch
   a model does (it is skipped today).
 - The clock self-check also requires a correlation peak (≥ 0.3) before its offset is trusted, so
   one unclear dictation leaves the session unmeasured instead of disabling it.
-- Storage is `~/Library/Application Support/hex/Training` (the existing lower-case data root),
+- Storage is `~/Library/Application Support/hex-speechless/Training` (the side build's own data
+  root; a released Hex keeps `hex/Training`),
   one folder `<YYYY-MM-DD>/<stamp>-<dictation>-<piece>/`.
 - `airpods` in `meta.json` is the literal `"AirPods"`; CoreMotion exposes no product name.
 - The HUD's motion mark is a dot below the plate rather than a change to Dot scope itself, so the

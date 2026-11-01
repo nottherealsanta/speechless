@@ -3,3 +3,6 @@ build/
 DerivedData/
 .DS_Store
 xcuserdata/
+
+# The Hex fork that collects AirPods training data (its own repo).
+/hex/

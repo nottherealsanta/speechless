@@ -42,19 +42,22 @@ looks for it.
 
 ### 3. Build and run Hex, the dictation app that collects training data
 
-Hex lives in a fork at `~/src/hex-subvox` (branch `subvox/training-capture`). Every dictation made
-there is saved as a labelled motion example, which is how the model gets hours instead of minutes.
-See [`docs/HEX_FORK_PLAN.md`](docs/HEX_FORK_PLAN.md).
+Hex lives in `hex/` inside this checkout: a fork kept in its own repo, gitignored here, on branch
+`speechless/training-capture`. Every dictation made there is saved as a labelled motion example,
+which is how the model gets hours instead of minutes. See [`docs/HEX_FORK_PLAN.md`](docs/HEX_FORK_PLAN.md).
 
 ```sh
-cd ~/src/hex-subvox
-cargo build --bin hex
-./target/debug/hex
+cd hex
+HEX_SPEECHLESS_BUILD=1 ./scripts/build-app.sh    # → target/app/Hex Speechless.app
+open target/app/Hex\ Speechless.app
 ```
 
-In Hex: download a transcription model when it asks, grant **Microphone** and **Accessibility**,
-then turn on **Settings › Labs › AirPods training data**. On the first dictation macOS asks for
-**Motion** as well.
+`Hex Speechless.app` is ad-hoc signed with its own bundle id (`anomaly.hex.speechless`), data
+folder (`~/Library/Application Support/hex-speechless`) and config (`~/.config/hex-speechless`), so
+it installs beside a released Hex and never checks for updates. On first run it downloads a
+transcription model; grant **Microphone** and **Accessibility**, then turn on
+**Settings › Labs › AirPods training data**. On the first dictation macOS asks for **Motion** as
+well.
 
 ### 4. Dictate a first batch
 
@@ -63,11 +66,12 @@ motion is arriving; if it stays dark, the AirPods are not reporting and nothing 
 Then check what landed:
 
 ```sh
-./target/debug/hex training status     # CoreMotion state, today's count, rejection reasons
-./target/debug/hex training list       # one folder per piece: text, duration, Hz
+BIN="hex/target/app/Hex Speechless.app/Contents/MacOS/hex"
+"$BIN" training status     # CoreMotion state, today's count, rejection reasons
+"$BIN" training list       # one folder per piece: text, duration, Hz
 ```
 
-Examples go to `~/Library/Application Support/hex/Training/<day>/<stamp>-<dictation>-<piece>/`,
+Examples go to `~/Library/Application Support/hex-speechless/Training/<day>/<stamp>-<dictation>-<piece>/`,
 one `motion.csv` + `meta.json` per piece. No audio is written.
 
 ### 5. Train on them and install the result

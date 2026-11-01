@@ -4,7 +4,8 @@ Sources:
   * Session folders (~/Documents/Speechless/Sessions/*): motion.csv + words.csv (STT words with
     timestamps) + meta.json. Consecutive words are grouped into short phrases.
   * dataset.json (~/Library/Application Support/Speechless): reviewed single-word takes.
-  * Hex's training folder (~/Library/Application Support/hex/Training/<day>/<example>/):
+  * Hex Speechless's training folder
+    (~/Library/Application Support/hex-speechless/Training/<day>/<example>/):
     motion.csv + meta.json from each dictation made with Labs › AirPods training data
     on. See docs/HEX_FORK_PLAN.md.
 """
@@ -26,7 +27,7 @@ SILENT = "Silent mouthing"
 DEFAULT_SESSIONS = Path.home() / "Documents/Speechless/Sessions"
 DEFAULT_CLIPS = Path.home() / "Documents/Speechless/Clips"
 DEFAULT_DATASET = Path.home() / "Library/Application Support/Speechless/dataset.json"
-DEFAULT_HEX = Path.home() / "Library/Application Support/hex/Training"
+DEFAULT_HEX = Path.home() / "Library/Application Support/hex-speechless/Training"
 
 
 @dataclass

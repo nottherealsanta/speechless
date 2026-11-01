@@ -16,9 +16,11 @@ This is a personal experiment on one Mac. Keep every change aimed at running it 
   and data questions are settled by trying them.
 - Work in the working tree and commit locally; pushing is enough. No PR flow, no review.
 
-The Hex fork (`~/src/hex-subvox`, remote `https://github.com/nottherealsanta/hex`, branch
-`subvox/training-capture`) is where the dictation capture lives. Its `AGENTS.md` is upstream's
-guide and mostly does not apply here; this file wins.
+The Hex fork lives at `hex/` inside this checkout (gitignored, remote
+`https://github.com/nottherealsanta/hex`, branch `speechless/training-capture`) and is where the
+dictation capture lives. It builds as `Hex Speechless.app` with
+`HEX_SPEECHLESS_BUILD=1 ./scripts/build-app.sh` from `hex/`. Its `AGENTS.md` is upstream's guide
+and mostly does not apply here; this file wins.
 
 ## Layout
 
@@ -50,7 +52,7 @@ uv run python -m speechless_train.export checkpoints/motion-moonshine.pt --insta
 
 Data lives at `~/Documents/Speechless/{Sessions,Clips}` and
 `~/Library/Application Support/Speechless/{dataset.json,Model}`. Hex's dictations land in
-`~/Library/Application Support/hex/Training`; `--hex` points the trainer at them (it is already
+`~/Library/Application Support/hex-speechless/Training`; `--hex` points the trainer at them (it is already
 the default).
 
 ## Current state
