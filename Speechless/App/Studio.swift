@@ -21,6 +21,18 @@ struct Clip: Identifiable, Codable, Hashable {
     var createdAt: Date
 }
 
+/// One example Hex saved while dictating with Labs › AirPods training data on.
+/// Stored at ~/Library/Application Support/hex-speechless/Training/<day>/<id>/
+/// as `motion.csv` + `meta.json`, with no audio; read by
+/// `training/speechless_train/data.py:load_hex`. Shown here so the dictations
+/// that feed the model are visible beside the takes recorded in this app.
+struct HexExample: Identifiable, Hashable {
+    var id: String
+    var text: String
+    var duration: Double
+    var day: String
+}
+
 @MainActor @Observable
 final class Studio {
     enum Screen: String, CaseIterable, Identifiable {
@@ -52,6 +64,8 @@ final class Studio {
     private(set) var draftMotion: [MotionSample] = []
     private(set) var isTranscribing = false
     private(set) var clips: [Clip] = []
+    /// Hex's dictations (`--hex` in the trainer), listed read-only.
+    private(set) var hexExamples: [HexExample] = []
     private(set) var message: String?
 
     // Inference
@@ -79,6 +93,13 @@ final class Studio {
     static var clipsRoot: URL {
         URL.documentsDirectory.appending(path: "Speechless/Clips", directoryHint: .isDirectory)
     }
+    /// What Hex Speechless builds write, and the trainer's `--hex` default.
+    static var hexRoot: URL {
+        URL.applicationSupportDirectory
+            .appending(path: "hex-speechless/Training", directoryHint: .isDirectory)
+    }
+    /// Takes and Hex dictations together: what a training run sees.
+    var exampleCount: Int { clips.count + hexExamples.count }
     /// The repo's `training/` folder, located from this source file at build time.
     static let trainingDirectory = URL(filePath: #filePath)
         .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
@@ -99,6 +120,7 @@ final class Studio {
         motion.start()
         audio.refreshDevices()
         loadClips()
+        loadHexExamples()
         refreshModelStatus()
         installKeyMonitor()
         Task {
@@ -314,6 +336,47 @@ final class Studio {
         NSWorkspace.shared.activateFileViewerSelecting([Self.clipsRoot])
     }
 
+    /// Reads Hex's training folder: one `meta.json` per dictation piece, next
+    /// to a `motion.csv`. Missing or half-written folders are skipped, as the
+    /// trainer skips them.
+    func loadHexExamples() {
+        hexExamples = Self.hexExamples(in: Self.hexRoot)
+    }
+
+    /// Every example folder under `root`: `<day>/<id>/{motion.csv, meta.json}`.
+    /// Half-written or unlabelled folders are skipped, as the trainer skips them.
+    nonisolated static func hexExamples(in root: URL) -> [HexExample] {
+        let days = (try? FileManager.default.contentsOfDirectory(
+            at: root, includingPropertiesForKeys: [.isDirectoryKey])) ?? []
+        var examples: [HexExample] = []
+        for day in days {
+            let pieces = (try? FileManager.default.contentsOfDirectory(
+                at: day, includingPropertiesForKeys: [.isDirectoryKey])) ?? []
+            for piece in pieces {
+                if let example = hexExample(at: piece, day: day.lastPathComponent) {
+                    examples.append(example)
+                }
+            }
+        }
+        return examples.sorted { $0.id > $1.id }
+    }
+
+    nonisolated static func hexExample(at piece: URL, day: String) -> HexExample? {
+        guard FileManager.default.fileExists(atPath: piece.appending(path: "motion.csv").path),
+              let data = try? Data(contentsOf: piece.appending(path: "meta.json")),
+              let meta = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+              let text = (meta["text"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !text.isEmpty
+        else { return nil }
+        let ms = (meta["durationMs"] as? NSNumber)?.doubleValue ?? 0
+        return HexExample(id: piece.path, text: text, duration: ms / 1000, day: day)
+    }
+
+    func revealHexExamples() {
+        try? FileManager.default.createDirectory(at: Self.hexRoot, withIntermediateDirectories: true)
+        NSWorkspace.shared.activateFileViewerSelecting([Self.hexRoot])
+    }
+
     private func loadClips() {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
@@ -389,7 +452,8 @@ final class Studio {
         let dir = Self.trainingDirectory
         let script = """
         export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"; unset VIRTUAL_ENV
-        cd "\(dir.path)" && uv run python -m speechless_train.train --epochs \(epochs) \
+        cd "\(dir.path)" && uv run python -m speechless_train.train \
+          --hex "$HOME/Library/Application Support/hex-speechless/Training" --epochs \(epochs) \
           && uv run python -m speechless_train.export checkpoints/motion-moonshine.pt --install
         """
         let process = Process()

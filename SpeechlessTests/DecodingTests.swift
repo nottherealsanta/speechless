@@ -102,3 +102,35 @@ final class AutoLabelerTests: XCTestCase {
         XCTAssertGreaterThan(result.accuracy, 0.9)
     }
 }
+
+final class HexExampleTests: XCTestCase {
+    /// Hex writes `<day>/<id>/{motion.csv, meta.json}`; the app lists a piece
+    /// only when both are there and the text is usable.
+    func testHexExamplesSkipUnfinishedFolders() throws {
+        let root = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appending(path: "hex-\(UUID().uuidString)")
+        let day = root.appending(path: "2026-11-01")
+        let good = day.appending(path: "20261101T143205.123-7f3a-0")
+        let noMotion = day.appending(path: "20261101T143230.000-7f3a-1")
+        let noText = day.appending(path: "20261101T143300.000-7f3a-2")
+        defer { try? FileManager.default.removeItem(at: root) }
+        for folder in [good, noMotion, noText] {
+            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            try "t,ax,ay,az\n0,0,0,0\n".write(to: folder.appending(path: "motion.csv"),
+                                            atomically: true, encoding: .utf8)
+        }
+        try #"{"schema":1,"text":"send the report","durationMs":2310}"#
+            .write(to: good.appending(path: "meta.json"), atomically: true, encoding: .utf8)
+        try #"{"schema":1,"text":"no motion column","durationMs":500}"#
+            .write(to: noMotion.appending(path: "meta.json"), atomically: true, encoding: .utf8)
+        try #"{"schema":1,"text":"  ","durationMs":500}"#
+            .write(to: noText.appending(path: "meta.json"), atomically: true, encoding: .utf8)
+        try FileManager.default.removeItem(at: noMotion.appending(path: "motion.csv"))
+
+        let examples = Studio.hexExamples(in: root)
+        XCTAssertEqual(examples.count, 1, "only the finished piece counts")
+        XCTAssertEqual(examples.first?.text, "send the report")
+        XCTAssertEqual(examples.first?.day, "2026-11-01")
+        XCTAssertEqual(examples.first?.duration ?? 0, 2.31, accuracy: 0.001)
+    }
+}

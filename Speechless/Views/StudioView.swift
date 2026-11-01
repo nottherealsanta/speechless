@@ -182,7 +182,7 @@ private struct TrainScreen: View {
             VStack(alignment: .leading, spacing: 0) {
                 HStack {
                     Text("Training data").font(.headline)
-                    Text("\(studio.clips.count)").foregroundStyle(.secondary).monospacedDigit()
+                    Text("\(studio.exampleCount)").foregroundStyle(.secondary).monospacedDigit()
                     Spacer()
                     Button("Show in Finder", systemImage: "folder", action: studio.revealClips)
                         .labelStyle(.iconOnly)
@@ -216,13 +216,47 @@ private struct TrainScreen: View {
                     }
                 }
                 .onDeleteCommand { studio.deleteClips(studio.selectedClips) }
+
+                // Hex's dictations live in their own folder and are read-only
+                // here; every training run includes them.
+                HStack {
+                    Text("From Hex dictations").font(.subheadline.weight(.semibold))
+                    Text("\(studio.hexExamples.count)").foregroundStyle(.secondary).monospacedDigit()
+                    Spacer()
+                    Button("Refresh", systemImage: "arrow.clockwise", action: studio.loadHexExamples)
+                        .labelStyle(.iconOnly)
+                        .help("Re-read \(Studio.hexRoot.path)")
+                    Button("Show in Finder", systemImage: "folder", action: studio.revealHexExamples)
+                        .labelStyle(.iconOnly)
+                }
+                .controlSize(.small)
+                .padding(.horizontal, 12).padding(.vertical, 6)
+                Group {
+                    if studio.hexExamples.isEmpty {
+                        Text("Nothing yet. Dictate with Hex Speechless and Labs › AirPods training data on; each pasted dictation appears here.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 12)
+                    } else {
+                        List(studio.hexExamples) { example in
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(example.text)
+                                Text("\(example.day) · \(String(format: "%.1f s", example.duration)) · motion only")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .frame(height: 150)
+                    }
+                }
                 Divider()
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
                         Stepper("Epochs \(epochs)", value: $epochs, in: 5...200, step: 5)
                         Spacer()
                         Button(studio.isTraining ? "Training…" : "Train Model") { studio.trainModel(epochs: epochs) }
-                            .disabled(studio.isTraining || studio.clips.count < 4)
+                            .disabled(studio.isTraining || studio.exampleCount < 4)
                     }
                     if !studio.trainingLog.isEmpty {
                         ScrollView {
