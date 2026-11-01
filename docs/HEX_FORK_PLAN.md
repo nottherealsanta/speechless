@@ -255,7 +255,8 @@ Then start M1 with `src/motion_bridge.swift`, modelled on `src/calendar.swift` a
 ## 12. Progress
 
 **Fork:** https://github.com/nottherealsanta/hex, cloned to `~/src/hex-subvox`, branch
-`subvox/training-capture` off `dev` at `5c118db` (three commits past the studied `a888312`).
+`subvox/training-capture` off `dev` at `5c118db` (three commits past the studied `a888312`), pushed
+to the fork. Actions are on for the fork; `check-linux.yml` runs from the branch by dispatch.
 
 | # | State | Notes |
 |---|---|---|
@@ -263,7 +264,7 @@ Then start M1 with `src/motion_bridge.swift`, modelled on `src/calendar.swift` a
 | M1 | ✅ code | `src/motion_bridge.swift`, `src/motion.rs`, `CoreMotion` in `build.rs`, `NSMotionUsageDescription`, `hex training status` (prints the CoreMotion state and measured Hz). Not yet run against worn AirPods. |
 | M2 | ✅ code | Three hooks: `motion::begin()` at the audio owner's capture start, `motion::end(clip.audio_window())` in `parakeet::submit`, `training_capture::finish(id, …)` in `record_history`. The clip's window comes from `DictationClip::audio_window()`, which applies `press_lead_ms` and the real sample count. |
 | M3 | ✅ code | Sentence and long-piece slicing, padding without overlap, the six quality checks, and the once-per-session clock self-check. |
-| M4 | partial | Labs row, `hex settings labs.airpods_training`, menu bar Training Data submenu (today's count, Discard Last, Open Folder, Delete All), 90‑day/1 GB retention. **Missing:** the HUD motion indicator. |
+| M4 | ✅ code | Labs row, `hex settings labs.airpods_training`, menu bar Training Data submenu (today's count, Discard Last, Open Folder, Delete All), 90‑day/1 GB retention, and the HUD motion mark: a dot under Dot scope's plate while samples arrive, dark when the AirPods are connected but silent, gone at the release. |
 | M5 | ✅ code | `load_hex()` and `--hex` in `training/speechless_train`, verified against a fixture folder. Silent clips still come from the Speechless app and stay held out. |
 
 **Deliberate differences from the plan**
@@ -280,10 +281,14 @@ Then start M1 with `src/motion_bridge.swift`, modelled on `src/calendar.swift` a
 - Storage is `~/Library/Application Support/hex/Training` (the existing lower-case data root),
   one folder `<YYYY-MM-DD>/<stamp>-<dictation>-<piece>/`.
 - `airpods` in `meta.json` is the literal `"AirPods"`; CoreMotion exposes no product name.
+- The HUD's motion mark is a dot below the plate rather than a change to Dot scope itself, so the
+  recording look stays exactly as it was; it fades in and out over 180 ms (instantly under Reduce
+  Motion) and lives in `DotUniforms.field.y`, a spare slot, so the shader's layout is unchanged.
 
 **Next**
 
 1. Exercise M1–M3 on real AirPods at a Mac: `hex labs on airpods-training`, `hex training status`,
    dictate, then `hex training list` and compare durations.
-2. The HUD motion indicator (M4), then Linux goldens for the Labs row.
+2. Exercise the HUD motion mark on real AirPods: it should light within a sample of the press and
+   stay dark when the AirPods are connected but sending nothing.
 3. Two weeks of normal use, then M6's silent-clip evaluation — the go/no-go point.
