@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main
-struct SubvoxApp: App {
+struct SpeechlessApp: App {
     @State private var studio = Studio()
 
     var body: some Scene {

@@ -1,7 +1,7 @@
 import CoreML
 import Foundation
 
-/// Greedy decoding for a Moonshine encoder/decoder pair exported by `training/subvox_train`.
+/// Greedy decoding for a Moonshine encoder/decoder pair exported by `training/speechless_train`.
 /// The decoder has fixed shapes (no KV cache): each step re-runs all `maxTokens` positions.
 final class MoonshineRunner: @unchecked Sendable {
     struct Config: Decodable {
@@ -18,7 +18,7 @@ final class MoonshineRunner: @unchecked Sendable {
     private let decoder: MLModel
 
     static var directory: URL {
-        URL.applicationSupportDirectory.appending(path: "Subvox/Model", directoryHint: .isDirectory)
+        URL.applicationSupportDirectory.appending(path: "Speechless/Model", directoryHint: .isDirectory)
     }
 
     /// `prefix` is "Motion" or "Audio"; vocab file is `vocab.json` or `audio_vocab.json`.
@@ -105,7 +105,7 @@ final class MoonshineRunner: @unchecked Sendable {
 }
 
 /// Fixed motion clock used by training: 25 Hz, the 16 MotionSample channels, attitude relative
-/// to the window start. Must match `training/subvox_train/data.py`.
+/// to the window start. Must match `training/speechless_train/data.py`.
 enum MotionTensor {
     static let hz = 25.0
     static let channels = 16

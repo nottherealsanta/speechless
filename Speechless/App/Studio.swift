@@ -3,8 +3,8 @@ import AppKit
 import Observation
 
 /// One saved training example: the motion + audio of one utterance and its (edited) text.
-/// Stored at ~/Documents/Subvox/Clips/<id>/{motion.csv, audio.wav, meta.json}; read by
-/// `training/subvox_train/data.py:load_clips`.
+/// Stored at ~/Documents/Speechless/Clips/<id>/{motion.csv, audio.wav, meta.json}; read by
+/// `training/speechless_train/data.py:load_clips`.
 struct DraftSegment: Identifiable, Hashable {
     var id = UUID()
     var text = ""
@@ -77,7 +77,7 @@ final class Studio {
 
     func nextPassage() { passageIndex = (passageIndex + 1) % ReadingPassages.all.count }
     static var clipsRoot: URL {
-        URL.documentsDirectory.appending(path: "Subvox/Clips", directoryHint: .isDirectory)
+        URL.documentsDirectory.appending(path: "Speechless/Clips", directoryHint: .isDirectory)
     }
     /// The repo's `training/` folder, located from this source file at build time.
     static let trainingDirectory = URL(filePath: #filePath)
@@ -213,7 +213,7 @@ final class Studio {
 
     private func transcribeDrafts() {
         guard AudioTextModel.isInstalled else {
-            message = "Moonshine audio model not installed. Run: cd training && uv run python -m subvox_train.export_audio --install"
+            message = "Moonshine audio model not installed. Run: cd training && uv run python -m speechless_train.export_audio --install"
             return
         }
         isTranscribing = true
@@ -389,8 +389,8 @@ final class Studio {
         let dir = Self.trainingDirectory
         let script = """
         export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"; unset VIRTUAL_ENV
-        cd "\(dir.path)" && uv run python -m subvox_train.train --epochs \(epochs) \
-          && uv run python -m subvox_train.export checkpoints/motion-moonshine.pt --install
+        cd "\(dir.path)" && uv run python -m speechless_train.train --epochs \(epochs) \
+          && uv run python -m speechless_train.export checkpoints/motion-moonshine.pt --install
         """
         let process = Process()
         process.executableURL = URL(filePath: "/bin/zsh")

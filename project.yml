@@ -1,4 +1,4 @@
-name: Subvox
+name: Speechless
 options:
   bundleIdPrefix: com.joeblau
   deploymentTarget:
@@ -12,38 +12,38 @@ settings:
     MARKETING_VERSION: "0.1.0"
     CURRENT_PROJECT_VERSION: "1"
 targets:
-  Subvox:
+  Speechless:
     type: application
     platform: macOS
-    sources: [Subvox]
+    sources: [Speechless]
     info:
-      path: Subvox/Info.plist
+      path: Speechless/Info.plist
       properties:
-        CFBundleDisplayName: Subvox
+        CFBundleDisplayName: Speechless
         LSApplicationCategoryType: public.app-category.developer-tools
-        NSMotionUsageDescription: Subvox reads AirPods head-motion data to study whether mouthed words can be decoded into text.
-        NSMicrophoneUsageDescription: Subvox records microphone audio alongside motion data and transcribes whispered speech for comparison.
-        NSSpeechRecognitionUsageDescription: Subvox transcribes microphone audio on-device as a reference for the motion decoder.
+        NSMotionUsageDescription: Speechless reads AirPods head-motion data to study whether mouthed words can be decoded into text.
+        NSMicrophoneUsageDescription: Speechless records microphone audio alongside motion data and transcribes whispered speech for comparison.
+        NSSpeechRecognitionUsageDescription: Speechless transcribes microphone audio on-device as a reference for the motion decoder.
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.joeblau.subvox
+        PRODUCT_BUNDLE_IDENTIFIER: com.joeblau.speechless
         CODE_SIGN_IDENTITY: Apple Development
         ENABLE_HARDENED_RUNTIME: NO
-  SubvoxTests:
+  SpeechlessTests:
     type: bundle.unit-test
     platform: macOS
-    sources: [SubvoxTests]
+    sources: [SpeechlessTests]
     dependencies:
-      - target: Subvox
+      - target: Speechless
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.joeblau.subvox.tests
+        PRODUCT_BUNDLE_IDENTIFIER: com.joeblau.speechless.tests
         GENERATE_INFOPLIST_FILE: YES
 schemes:
-  Subvox:
+  Speechless:
     build:
       targets:
-        Subvox: all
-        SubvoxTests: [test]
+        Speechless: all
+        SpeechlessTests: [test]
     test:
-      targets: [SubvoxTests]
+      targets: [SpeechlessTests]

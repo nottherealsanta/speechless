@@ -23,13 +23,13 @@ struct ParakeetTranscriber: Sendable {
         let fm = FileManager.default
         let home = fm.homeDirectoryForCurrentUser
         let cliCandidates = [
-            ProcessInfo.processInfo.environment["SUBVOX_TRANSCRIBE_CLI"],
+            ProcessInfo.processInfo.environment["SPEECHLESS_TRANSCRIBE_CLI"],
             home.appending(path: "src/transcribe.cpp/build/bin/transcribe-cli").path,
             "/opt/homebrew/bin/transcribe-cli", "/usr/local/bin/transcribe-cli",
         ].compactMap { $0 }
         guard let cli = cliCandidates.first(where: { fm.isExecutableFile(atPath: $0) }) else { return nil }
 
-        let modelCandidates: [String] = [ProcessInfo.processInfo.environment["SUBVOX_PARAKEET_MODEL"]].compactMap { $0 }
+        let modelCandidates: [String] = [ProcessInfo.processInfo.environment["SPEECHLESS_PARAKEET_MODEL"]].compactMap { $0 }
             + ["parakeet-unified-en-0.6b-gguf", "parakeet-tdt-0.6b-v3-gguf"].flatMap { repo -> [String] in
                 let snapshots = home.appending(path: ".cache/huggingface/hub/models--handy-computer--\(repo)/snapshots")
                 let dirs = (try? fm.contentsOfDirectory(at: snapshots, includingPropertiesForKeys: nil)) ?? []
@@ -45,7 +45,7 @@ struct ParakeetTranscriber: Sendable {
     var modelName: String { model.deletingPathExtension().lastPathComponent }
 
     func transcribe(_ samples: [Float]) throws -> Result {
-        let wav = FileManager.default.temporaryDirectory.appending(path: "subvox-\(UUID().uuidString).wav")
+        let wav = FileManager.default.temporaryDirectory.appending(path: "speechless-\(UUID().uuidString).wav")
         defer { try? FileManager.default.removeItem(at: wav) }
         try AudioClipBuffer.writeWAV(samples, to: wav)
 

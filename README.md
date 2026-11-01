@@ -1,4 +1,4 @@
-# Subvox
+# Speechless
 
 A macOS prototype that tests whether AirPods Pro head-motion data (`CMHeadphoneMotionManager`) carries enough information to turn **silently mouthed words into text**.
 
@@ -9,15 +9,15 @@ It doesn't use a language model. It's a small-vocabulary template recognizer plu
 ```sh
 brew install xcodegen   # once
 xcodegen generate
-open Subvox.xcodeproj   # ⌘R
+open Speechless.xcodeproj   # ⌘R
 ```
 
 Or from the command line:
 
 ```sh
-xcodebuild -project Subvox.xcodeproj -scheme Subvox -derivedDataPath build -allowProvisioningUpdates build
-open build/Build/Products/Debug/Subvox.app
-xcodebuild -project Subvox.xcodeproj -scheme Subvox -derivedDataPath build test
+xcodebuild -project Speechless.xcodeproj -scheme Speechless -derivedDataPath build -allowProvisioningUpdates build
+open build/Build/Products/Debug/Speechless.app
+xcodebuild -project Speechless.xcodeproj -scheme Speechless -derivedDataPath build test
 ```
 
 Requires macOS 14+, AirPods Pro or another headphone that supports head tracking, connected as the Mac's audio output. On first launch, grant **Motion**. The mic and speech prompts only appear when you start the mic.
@@ -29,10 +29,10 @@ Requires macOS 14+, AirPods Pro or another headphone that supports head tracking
 | **Train** | Shows live AirPods sensor data. Press **Record** (or hold Space), say a phrase and stop. The app records the AirPods motion during that time, and Moonshine Tiny on your Mac turns your speech into text in the text box. Edit the text, then click **Add to Training Data** (⌘↩). In *Silent mouthing* mode, nothing is transcribed and you type the text yourself. **Train Model** runs `training/`, then exports and installs the motion model. |
 | **Inference** | Shows live sensor data. Record while mouthing a phrase, and the LoRA-adapted Moonshine motion model decodes the motion into text. The microphone isn't used. |
 
-Clips are saved in `~/Documents/Subvox/Clips/<id>/` as `motion.csv`, `audio.wav` and `meta.json`. Models are stored in `~/Library/Application Support/Subvox/Model/`. First-time setup:
+Clips are saved in `~/Documents/Speechless/Clips/<id>/` as `motion.csv`, `audio.wav` and `meta.json`. Models are stored in `~/Library/Application Support/Speechless/Model/`. First-time setup:
 
 ```sh
-cd training && uv sync && uv run python -m subvox_train.export_audio --install
+cd training && uv sync && uv run python -m speechless_train.export_audio --install
 ```
 
 ## How decoding works
@@ -44,7 +44,7 @@ cd training && uv sync && uv run python -m subvox_train.export_audio --install
 
 ## Experiment protocol
 
-Use **Record Session** in the toolbar or on the Sensors screen. Recordings go to `~/Documents/Subvox/Sessions/<timestamp>-<condition>/`:
+Use **Record Session** in the toolbar or on the Sensors screen. Recordings go to `~/Documents/Speechless/Sessions/<timestamp>-<condition>/`:
 
 - `motion.csv`: every motion sample. `t` is seconds from session start.
 - `audio.caf`: microphone audio, if the mic is running.
@@ -53,7 +53,7 @@ Use **Record Session** in the toolbar or on the Sensors screen. Recordings go to
 
 Suggested runs: the same 5-word script under **Normal speech**, **Whisper** and **Silent mouthing**, 10 reps each. Then, in Train, compare the Evaluate results across feature sets.
 
-The training set lives at `~/Library/Application Support/Subvox/dataset.json`.
+The training set lives at `~/Library/Application Support/Speechless/dataset.json`.
 
 ## Auto-labelling with speech recognition
 
@@ -75,9 +75,9 @@ Training changes only the frontend and LoRA adapters on q/k/v/o and the MLPs: ab
 ```sh
 cd training
 uv sync
-uv run python -m subvox_train.train --synthetic --epochs 15   # smoke test
-uv run python -m subvox_train.train                           # your Sessions + dataset.json
-uv run python -m subvox_train.train --eval-only checkpoints/motion-moonshine.pt
+uv run python -m speechless_train.train --synthetic --epochs 15   # smoke test
+uv run python -m speechless_train.train                           # your Sessions + dataset.json
+uv run python -m speechless_train.train --eval-only checkpoints/motion-moonshine.pt
 ```
 
 Phrases are built from consecutive words in `words.csv`. Train and test splits use whole sessions. Silent-mouthing sessions are always kept for testing, so the reported WER shows whether the model works without speaking. The output also shows a most-frequent-phrase baseline.

@@ -1,8 +1,8 @@
 """Train / evaluate the motion→text Moonshine adapter.
 
-    uv run python -m subvox_train.train                      # train on your recordings
-    uv run python -m subvox_train.train --eval-only ckpt.pt  # score a checkpoint
-    uv run python -m subvox_train.train --synthetic          # smoke test, no data needed
+    uv run python -m speechless_train.train                      # train on your recordings
+    uv run python -m speechless_train.train --eval-only ckpt.pt  # score a checkpoint
+    uv run python -m speechless_train.train --synthetic          # smoke test, no data needed
 """
 
 from __future__ import annotations

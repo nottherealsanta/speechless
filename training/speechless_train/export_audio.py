@@ -1,7 +1,7 @@
 """Exports stock Moonshine Tiny (audio → text) to Core ML. The app uses it to transcribe what
 you say during "Say it" training so you can edit the text and save it as the label.
 
-    uv run python -m subvox_train.export_audio --install
+    uv run python -m speechless_train.export_audio --install
 """
 import argparse
 import json

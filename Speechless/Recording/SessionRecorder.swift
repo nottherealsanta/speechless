@@ -4,7 +4,7 @@ import Observation
 /// Records synchronized motion CSV + microphone audio + labelled segment events for offline
 /// analysis (normal speech vs. whisper vs. silent mouthing).
 ///
-/// Output: ~/Documents/Subvox/Sessions/<timestamp>-<condition>/
+/// Output: ~/Documents/Speechless/Sessions/<timestamp>-<condition>/
 ///   motion.csv  — every headphone-motion sample, t relative to session start
 ///   audio.caf   — microphone audio (if the mic is running)
 ///   events.csv  — captured segments with their label / prediction
@@ -36,7 +36,7 @@ final class SessionRecorder {
     private(set) var error: String?
 
     static var root: URL {
-        URL.documentsDirectory.appending(path: "Subvox/Sessions", directoryHint: .isDirectory)
+        URL.documentsDirectory.appending(path: "Speechless/Sessions", directoryHint: .isDirectory)
     }
 
     @ObservationIgnored private var directory: URL?

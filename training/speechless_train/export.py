@@ -1,9 +1,9 @@
-"""Exports a trained checkpoint to Core ML for the Subvox app.
+"""Exports a trained checkpoint to Core ML for the Speechless app.
 
-    uv run python -m subvox_train.export checkpoints/motion-moonshine.pt
+    uv run python -m speechless_train.export checkpoints/motion-moonshine.pt
     → checkpoints/MotionEncoder.mlpackage, MotionDecoder.mlpackage, vocab.json
 
-Install into the app with `--install` (copies to ~/Library/Application Support/Subvox/Model).
+Install into the app with `--install` (copies to ~/Library/Application Support/Speechless/Model).
 LoRA is merged into the base weights first, so the exported models are plain Moonshine-sized
 networks. The decoder has fixed shapes and no KV cache: each step re-runs MAX_TOKENS positions,
 which is cheap for Moonshine Tiny and short phrases.
@@ -26,7 +26,7 @@ from .model import MotionMoonshine
 
 MAX_MOTION = int(6 * MOTION_HZ)  # 6 s window
 MAX_TOKENS = 24
-INSTALL_DIR = Path.home() / "Library/Application Support/Subvox/Model"
+INSTALL_DIR = Path.home() / "Library/Application Support/Speechless/Model"
 
 
 class Encoder(nn.Module):

@@ -1038,7 +1038,7 @@ wheels = [
 ]
 
 [[package]]
-name = "subvox-train"
+name = "speechless-train"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [

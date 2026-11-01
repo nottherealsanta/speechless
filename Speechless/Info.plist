@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Subvox</string>
+	<string>Speechless</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -23,10 +23,10 @@
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.developer-tools</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Subvox records microphone audio alongside motion data and transcribes whispered speech for comparison.</string>
+	<string>Speechless records microphone audio alongside motion data and transcribes whispered speech for comparison.</string>
 	<key>NSMotionUsageDescription</key>
-	<string>Subvox reads AirPods head-motion data to study whether mouthed words can be decoded into text.</string>
+	<string>Speechless reads AirPods head-motion data to study whether mouthed words can be decoded into text.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>Subvox transcribes microphone audio on-device as a reference for the motion decoder.</string>
+	<string>Speechless transcribes microphone audio on-device as a reference for the motion decoder.</string>
 </dict>
 </plist>

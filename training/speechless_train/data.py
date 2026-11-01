@@ -1,9 +1,9 @@
-"""Loads Subvox recordings into (motion, text[, audio]) training examples.
+"""Loads Speechless recordings into (motion, text[, audio]) training examples.
 
 Sources:
-  * Session folders (~/Documents/Subvox/Sessions/*): motion.csv + words.csv (STT words with
+  * Session folders (~/Documents/Speechless/Sessions/*): motion.csv + words.csv (STT words with
     timestamps) + meta.json. Consecutive words are grouped into short phrases.
-  * dataset.json (~/Library/Application Support/Subvox): reviewed single-word takes.
+  * dataset.json (~/Library/Application Support/Speechless): reviewed single-word takes.
   * Hex's training folder (~/Library/Application Support/hex/Training/<day>/<example>/):
     motion.csv + meta.json from each dictation made with Labs › AirPods training data
     on. See docs/HEX_FORK_PLAN.md.
@@ -23,9 +23,9 @@ CHANNELS = ["ax", "ay", "az", "rx", "ry", "rz", "pitch", "roll", "yaw",
 MOTION_HZ = 25.0
 SILENT = "Silent mouthing"
 
-DEFAULT_SESSIONS = Path.home() / "Documents/Subvox/Sessions"
-DEFAULT_CLIPS = Path.home() / "Documents/Subvox/Clips"
-DEFAULT_DATASET = Path.home() / "Library/Application Support/Subvox/dataset.json"
+DEFAULT_SESSIONS = Path.home() / "Documents/Speechless/Sessions"
+DEFAULT_CLIPS = Path.home() / "Documents/Speechless/Clips"
+DEFAULT_DATASET = Path.home() / "Library/Application Support/Speechless/dataset.json"
 DEFAULT_HEX = Path.home() / "Library/Application Support/hex/Training"
 
 

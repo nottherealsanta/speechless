@@ -54,6 +54,6 @@ private struct RecordToolbarButton: View {
                   systemImage: recorder.isRecording ? "stop.circle.fill" : "record.circle")
         }
         .tint(recorder.isRecording ? .red : nil)
-        .help("Record synchronized motion CSV + audio to ~/Documents/Subvox/Sessions")
+        .help("Record synchronized motion CSV + audio to ~/Documents/Speechless/Sessions")
     }
 }

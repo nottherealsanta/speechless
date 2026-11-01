@@ -1,7 +1,7 @@
 # Plan: Hex fork that collects AirPods motion training data
 
 **Goal:** every time you dictate with Hex while wearing AirPods, save the AirPods head motion
-together with the transcript. Each dictation becomes a labelled training example for the Subvox
+together with the transcript. Each dictation becomes a labelled training example for the Speechless
 motion → text model, with no extra effort.
 
 **Fork of:** [anomalyco/hex](https://github.com/anomalyco/hex). This is a local‑first voice
@@ -21,7 +21,7 @@ hardware is not yet verified. See [Progress](#12-progress) at the end.
 
 ## 1. Why Hex
 
-The Subvox app can only collect data when you sit down and record. That gives minutes of data per
+The Speechless app can only collect data when you sit down and record. That gives minutes of data per
 day, but the model needs hundreds of hours. Dictation already produces the pair we need, many
 times a day:
 
@@ -120,7 +120,7 @@ provides them at no extra cost.
 
 ## 4. Slicing long dictations
 
-The motion model reads at most 6 s at a time. Slicing uses the same rules as Subvox's
+The motion model reads at most 6 s at a time. Slicing uses the same rules as Speechless's
 `ParakeetTranscriber.utterances`:
 
 1. Group words into sentences: break after `.` `?` `!` or a pause ≥ 0.45 s.
@@ -134,7 +134,7 @@ Short dictations (≤ 5.8 s) are saved whole.
 
 ## 5. Saved data format
 
-Compatible with the Subvox trainer. One folder per example:
+Compatible with the Speechless trainer. One folder per example:
 
 ```
 ~/Library/Application Support/Hex/Training/
@@ -191,11 +191,11 @@ Failures are counted by reason (visible via `hex training status`). Nothing is s
 
 ## 7. Training integration (`speechless/training`)
 
-1. Add `load_hex(root)` to `subvox_train/data.py`. It reads the format above and uses `session` for the train/test split.
+1. Add `load_hex(root)` to `speechless_train/data.py`. It reads the format above and uses `session` for the train/test split.
 2. The audio-teacher distillation loss is skipped for Hex data (there's no audio). Text-only training already works.
-3. **Silent-mouthing test data still comes from the Subvox app** (Train screen, *Silent mouthing* mode). It is always held out. Hex data teaches the model; silent clips show whether it really reads silent speech.
+3. **Silent-mouthing test data still comes from the Speechless app** (Train screen, *Silent mouthing* mode). It is always held out. Hex data teaches the model; silent clips show whether it really reads silent speech.
 4. Report word error rate against the most-frequent-phrase baseline, and on a held-out split of unseen word combinations.
-5. Optional nightly job: train → export to Core ML → install into Subvox.
+5. Optional nightly job: train → export to Core ML → install into Speechless.
 
 ---
 
@@ -208,7 +208,7 @@ Failures are counted by reason (visible via `hex training status`). Nothing is s
 | **M2** | Three hooks; write `motion.csv` + `meta.json` | One dictation makes one folder; motion duration matches audio duration |
 | **M3** | Slicing + quality checks + timing self-check | A 20 s dictation becomes ≥ 4 pieces with correct text; offset < 80 ms |
 | **M4** | Labs toggle, HUD indicator, menu count, Discard last, Delete all, retention | Off by default; all controls work |
-| **M5** | `load_hex()` in the trainer | `uv run python -m subvox_train.train` trains on Hex data |
+| **M5** | `load_hex()` in the trainer | `uv run python -m speechless_train.train` trains on Hex data |
 | **M6** | Two weeks of normal use, then evaluate on silent clips | Report: hours collected, silent WER vs baseline. **Go/no-go point** |
 
 **Rough size:** M1–M4 is about 1,200 lines of Rust and Swift, plus UI goldens.
@@ -233,7 +233,7 @@ Failures are counted by reason (visible via `hex training status`). Nothing is s
 |---|---|---|
 | Using AirPods as the mic switches them to the Bluetooth headset profile | Lower transcript quality, possibly different motion | Recommend the Mac's built-in mic for dictation. Record which mic was used in `meta.json` |
 | Motion only streams when AirPods are the active audio output | Gaps or no data | Check connection status; the coverage check rejects gaps |
-| **Speaking ≠ silent mouthing** | Model learns speech-related motion that disappears when silent | Always evaluate on silent clips from Subvox. Never report spoken-only scores as success |
+| **Speaking ≠ silent mouthing** | Model learns speech-related motion that disappears when silent | Always evaluate on silent clips from Speechless. Never report spoken-only scores as success |
 | 25 Hz head motion may not carry enough information | The project may not work | M6 is the decision point |
 | Upstream Hex changes fast (1,000+ commits) | Merge conflicts | New files + three hooks only. Rebase weekly. Consider proposing a generic "dictation completed" hook upstream |
 | Licenses | Hex is MIT; Parakeet uses the NVIDIA Open Model License | Keep notices. Personal research use is fine; check before distributing |
@@ -264,7 +264,7 @@ Then start M1 with `src/motion_bridge.swift`, modelled on `src/calendar.swift` a
 | M2 | ✅ code | Three hooks: `motion::begin()` at the audio owner's capture start, `motion::end(clip.audio_window())` in `parakeet::submit`, `training_capture::finish(id, …)` in `record_history`. The clip's window comes from `DictationClip::audio_window()`, which applies `press_lead_ms` and the real sample count. |
 | M3 | ✅ code | Sentence and long-piece slicing, padding without overlap, the six quality checks, and the once-per-session clock self-check. |
 | M4 | partial | Labs row, `hex settings labs.airpods_training`, menu bar Training Data submenu (today's count, Discard Last, Open Folder, Delete All), 90‑day/1 GB retention. **Missing:** the HUD motion indicator. |
-| M5 | ✅ code | `load_hex()` and `--hex` in `training/subvox_train`, verified against a fixture folder. Silent clips still come from the Subvox app and stay held out. |
+| M5 | ✅ code | `load_hex()` and `--hex` in `training/speechless_train`, verified against a fixture folder. Silent clips still come from the Speechless app and stay held out. |
 
 **Deliberate differences from the plan**
 
