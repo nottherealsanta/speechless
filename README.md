@@ -2,9 +2,16 @@
 
 A macOS prototype that tests whether AirPods Pro head-motion data (`CMHeadphoneMotionManager`) carries enough information to turn **silently mouthed words into text**.
 
-It doesn't use a language model. It's a small-vocabulary template recognizer plus a statistical test that tells you whether the signal is real.
+The baseline is a small-vocabulary template recognizer plus a statistical test that tells you whether the signal is real. The main model is a LoRA-adapted Moonshine Tiny decoder trained on motion alone.
 
-## Build & run
+## Run it on this Mac
+
+One Mac, no CI: this is the only setup that is supported today. You need macOS 14+, AirPods Pro
+or another headphone that supports head tracking, Xcode, [xcodegen](https://github.com/yonaskolb/XcodeGen),
+[uv](https://docs.astral.sh/uv/), and a Rust toolchain for the Hex fork. Run the steps in order;
+each one is a check that the previous one worked.
+
+### 1. Build the app
 
 ```sh
 brew install xcodegen   # once
@@ -12,15 +19,78 @@ xcodegen generate
 open Speechless.xcodeproj   # ⌘R
 ```
 
-Or from the command line:
+`project.yml` names team `K78G42H4U2`, which has no account on this Mac, so a plain
+`xcodebuild` stops at signing. Either put your own `DEVELOPMENT_TEAM` in `project.yml`, or build
+unsigned for a plain check:
 
 ```sh
-xcodebuild -project Speechless.xcodeproj -scheme Speechless -derivedDataPath build -allowProvisioningUpdates build
+xcodebuild -project Speechless.xcodeproj -scheme Speechless -derivedDataPath build CODE_SIGNING_ALLOWED=NO build
 open build/Build/Products/Debug/Speechless.app
-xcodebuild -project Speechless.xcodeproj -scheme Speechless -derivedDataPath build test
 ```
 
-Requires macOS 14+, AirPods Pro or another headphone that supports head tracking, connected as the Mac's audio output. On first launch, grant **Motion**. The mic and speech prompts only appear when you start the mic.
+An unsigned build runs; a signed one keeps its Motion and Microphone permissions across rebuilds.
+On first launch, grant **Motion**. The mic and speech prompts only appear when you start the mic.
+
+### 2. Install the speech model the app uses for labels
+
+```sh
+cd training && uv sync && uv run python -m speechless_train.export_audio --install
+```
+
+This writes Moonshine Tiny to `~/Library/Application Support/Speechless/Model/`, where the app
+looks for it.
+
+### 3. Build and run Hex, the dictation app that collects training data
+
+Hex lives in a fork at `~/src/hex-subvox` (branch `subvox/training-capture`). Every dictation made
+there is saved as a labelled motion example, which is how the model gets hours instead of minutes.
+See [`docs/HEX_FORK_PLAN.md`](docs/HEX_FORK_PLAN.md).
+
+```sh
+cd ~/src/hex-subvox
+cargo build --bin hex
+./target/debug/hex
+```
+
+In Hex: download a transcription model when it asks, grant **Microphone** and **Accessibility**,
+then turn on **Settings › Labs › AirPods training data**. On the first dictation macOS asks for
+**Motion** as well.
+
+### 4. Dictate a first batch
+
+Wear the AirPods and dictate 30–60 short phrases. The HUD shows a small dot under the plate while
+motion is arriving; if it stays dark, the AirPods are not reporting and nothing will be saved.
+Then check what landed:
+
+```sh
+./target/debug/hex training status     # CoreMotion state, today's count, rejection reasons
+./target/debug/hex training list       # one folder per piece: text, duration, Hz
+```
+
+Examples go to `~/Library/Application Support/hex/Training/<day>/<stamp>-<dictation>-<piece>/`,
+one `motion.csv` + `meta.json` per piece. No audio is written.
+
+### 5. Train on them and install the result
+
+```sh
+cd ~/repos/speechless/training
+uv run python -m speechless_train.train --hex --epochs 5
+uv run python -m speechless_train.export checkpoints/motion-moonshine.pt --install
+```
+
+`--hex` is already the default folder, and your own Speechless sessions, clips and `dataset.json`
+are mixed in. `--install` replaces the motion model in
+`~/Library/Application Support/Speechless/Model/`.
+
+### 6. Try it
+
+Open Speechless → **Inference**, hold Space, and mouth a phrase without speaking. The microphone
+is not used; the installed model decodes the motion alone. A first run on a few dozen examples is
+expected to be poor — it proves the loop, not the idea.
+
+The proof of concept ends here. Two weeks of normal dictation followed by the silent-clip
+evaluation is the go/no-go point (`docs/HEX_FORK_PLAN.md`, M6); [`AGENTS.md`](AGENTS.md) has the
+ground rules for working on this.
 
 ## Screens
 
@@ -76,7 +146,7 @@ Training changes only the frontend and LoRA adapters on q/k/v/o and the MLPs: ab
 cd training
 uv sync
 uv run python -m speechless_train.train --synthetic --epochs 15   # smoke test
-uv run python -m speechless_train.train                           # your Sessions + dataset.json
+uv run python -m speechless_train.train --hex --epochs 15         # your Sessions + dataset.json + Hex's dictations
 uv run python -m speechless_train.train --eval-only checkpoints/motion-moonshine.pt
 ```
 
