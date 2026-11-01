@@ -165,7 +165,12 @@ def main():
     print(f"trainable params: {sum(p.numel() for p in params):,} / {sum(p.numel() for p in model.parameters()):,}")
     opt = torch.optim.AdamW(params, lr=a.lr, weight_decay=0.01)
     steps = a.epochs * max(1, -(-len(train) // a.batch_size))
-    sched = torch.optim.lr_scheduler.OneCycleLR(opt, a.lr, total_steps=steps, pct_start=0.1)
+    try:
+        sched = torch.optim.lr_scheduler.OneCycleLR(opt, a.lr, total_steps=steps, pct_start=0.1)
+    except ZeroDivisionError:
+        # Torch divides by a zero-width warmup at some step counts (ten steps at
+        # 10% is one); a run that short keeps a flat rate instead of crashing.
+        sched = torch.optim.lr_scheduler.LambdaLR(opt, lambda _: 1.0)
     rng = random.Random(a.seed)
     best = float("inf")
     a.out.parent.mkdir(parents=True, exist_ok=True)

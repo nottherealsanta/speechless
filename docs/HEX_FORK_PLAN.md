@@ -8,8 +8,10 @@ motion → text model, with no extra effort.
 dictation app written in Rust, with Swift bridges on macOS and Parakeet running locally through
 transcribe.cpp. Studied at commit `a888312` (2026‑10‑31).
 
-**Status:** M0–M3 built and M5's loader added (2026‑11‑01); M4 is partial and
-hardware is not yet verified. See [Progress](#12-progress) at the end.
+**Status:** M0–M5 built (2026‑11‑01), the HUD motion mark included; hardware is not verified
+yet. This is a one-Mac experiment: no CI, no goldens, and no Linux or Windows work until a real
+recording trains a model that reads silent speech (see [`AGENTS.md`](../AGENTS.md)). The next step
+is the proof of concept, not the test matrix. See [Progress](#12-progress) at the end.
 
 **Scope:**
 - ✅ Hold Option → AirPods motion is recorded → Hex transcribes → motion + text are saved (sliced into pieces if long).
